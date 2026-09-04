@@ -130,3 +130,27 @@ class Attendance(db.Model):
 
     student = db.relationship("Student", backref="attendance_records")
     lecture = db.relationship("Lecture", backref="attendance_records")
+
+
+class AttendanceSettings(db.Model):
+    __tablename__ = "attendance_settings"
+
+    id = db.Column(db.Integer, primary_key=True, default=1)
+    warning_threshold = db.Column(db.Float, nullable=False, default=75.0)
+    detain_threshold = db.Column(db.Float, nullable=False, default=50.0)
+    target_threshold = db.Column(db.Float, nullable=False, default=75.0)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class MLPrediction(db.Model):
+    __tablename__ = "ml_predictions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False, index=True)
+    risk_class = db.Column(db.String(20), nullable=False)
+    high_risk_probability = db.Column(db.Float, nullable=False)
+    features_json = db.Column(db.Text, nullable=False)
+    data_source = db.Column(db.String(30), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    student = db.relationship("Student", backref="ml_predictions")

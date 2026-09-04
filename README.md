@@ -52,3 +52,10 @@ Step 6 adds `/api/attendance/mark`. It records attendance only after a reliable
 recognition, active-student check, open attendance window, and lecture lookup.
 Attendance is classified as `PRESENT` or `LATE`, and a database uniqueness
 constraint prevents a student from being recorded twice for one lecture.
+
+Step 9 adds ML attendance-risk prediction at `/ml-risk` and
+`/api/ml-risk/<student_id>`. Run `flask --app app train-risk-model` to persist
+the Random Forest model. Because this project does not yet contain enough
+labeled historical examples, training uses deterministic data labeled
+`DEMO_SYNTHETIC`; predictions expose that source and evaluation metrics. ML is
+decision support only and does not make detention decisions.

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Detain Risk | Attendance System{% endblock %}
+{% block content %}
+<h1>Attendance risk</h1>
+<form method="get"><input name="search" value="{{ search }}" placeholder="Student or roll number"><select name="risk"><option value="">All statuses</option><option value="DETAIN RISK" {% if risk_filter == "DETAIN RISK" %}selected{% endif %}>Below detain threshold</option><option value="WARNING" {% if risk_filter == "WARNING" %}selected{% endif %}>Warning</option><option value="SAFE" {% if risk_filter == "SAFE" %}selected{% endif %}>Above warning threshold</option></select><button type="submit">Filter</button></form>
+<table><thead><tr><th>Student</th><th>Roll</th><th>Branch</th><th>Attendance</th><th>Lectures</th><th>Status</th></tr></thead><tbody>{% for row in rows %}<tr><td>{{ row.student.full_name }}</td><td>{{ row.roll_number }}</td><td>{{ row.branch }}</td><td>{{ row.percentage }}%</td><td>{{ row.present }}/{{ row.total_lectures }}</td><td>{{ row.risk_status }}</td></tr>{% else %}<tr><td colspan="6">No students match the filter.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

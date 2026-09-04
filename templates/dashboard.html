@@ -4,4 +4,27 @@
 <h1>Dashboard</h1>
 <p>Welcome, {{ current_user.email }}.</p>
 <p>Your role is {{ current_user.role }}.</p>
+{% if role == "admin" %}
+<h2>Administration overview</h2>
+<dl>
+	<dt>Total active students</dt><dd>{{ dashboard.total_students }}</dd>
+	<dt>Present today</dt><dd>{{ dashboard.present_today }}</dd>
+	<dt>Absent today</dt><dd>{{ dashboard.absent_today }}</dd>
+	<dt>Overall attendance</dt><dd>{{ dashboard.overall_percentage }}%</dd>
+</dl>
+<h2>Active lecture</h2>
+{% if dashboard.active_lecture %}<p>{{ dashboard.active_lecture.subject.subject_name }} with {{ dashboard.active_lecture.faculty.full_name }} in {{ dashboard.active_lecture.faculty.department }}. Present: {{ dashboard.lecture_present }}</p>{% else %}<p>NO ACTIVE LECTURE</p>{% endif %}
+{% elif role == "faculty" %}
+<h2>Faculty overview</h2>
+<p>{{ dashboard.faculty.full_name if dashboard.faculty else "Faculty profile is not configured." }}</p>
+<h3>Assigned subjects</h3>
+<ul>{% for subject in dashboard.assigned_subjects %}<li>{{ subject.subject_code }} - {{ subject.subject_name }}</li>{% else %}<li>No assigned subjects.</li>{% endfor %}</ul>
+<h3>Today's lectures</h3>
+<ul>{% for lecture in dashboard.todays_lectures %}<li>{{ lecture.subject.subject_name }} ({{ lecture.start_time }}-{{ lecture.end_time }})</li>{% else %}<li>No lectures today.</li>{% endfor %}</ul>
+<h3>Current lecture</h3>
+{% if dashboard.current_lecture %}<p>{{ dashboard.current_lecture.subject.subject_name }}. Present students: {{ dashboard.present_students|length }}</p>{% else %}<p>NO ACTIVE LECTURE</p>{% endif %}
+{% else %}
+<h2>Student overview</h2>
+{% if dashboard.student %}<p>{{ dashboard.student.full_name }} ({{ dashboard.student.student_id }})</p><dl><dt>Lectures conducted</dt><dd>{{ dashboard.total_lectures }}</dd><dt>Lectures attended</dt><dd>{{ dashboard.attended_lectures }}</dd><dt>Attendance</dt><dd>{{ dashboard.attendance_percentage }}%</dd></dl><h3>Today's attendance</h3><ul>{% for record in dashboard.today_records %}<li>{{ record.lecture.subject.subject_name }}: {{ record.status }}</li>{% else %}<li>No attendance recorded today.</li>{% endfor %}</ul>{% else %}<p>Student profile is not configured.</p>{% endif %}
+{% endif %}
 {% endblock %}

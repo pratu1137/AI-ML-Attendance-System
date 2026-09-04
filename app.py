@@ -12,6 +12,10 @@ from models import User, UserRole
 from routes.academic import academic_bp
 from routes.auth import auth_bp, role_required
 from routes.face import face_bp
+from routes.analytics import analytics_bp
+from routes.ml import ml_bp
+from ml.train_model import train_from_cli
+from services.dashboard_service import admin_dashboard, faculty_dashboard, student_dashboard
 
 
 def create_app(config_class: type[Config] = Config) -> Flask:
@@ -28,6 +32,8 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     app.register_blueprint(auth_bp)
     app.register_blueprint(academic_bp)
     app.register_blueprint(face_bp)
+    app.register_blueprint(analytics_bp)
+    app.register_blueprint(ml_bp)
 
     @app.errorhandler(RequestEntityTooLarge)
     def handle_oversized_upload(_error):
@@ -46,12 +52,16 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     @app.get("/dashboard")
     @login_required
     def dashboard():
-        return render_template("dashboard.html")
+        if current_user.role == UserRole.ADMIN.value:
+            return render_template("dashboard.html", role="admin", dashboard=admin_dashboard())
+        if current_user.role == UserRole.FACULTY.value:
+            return render_template("dashboard.html", role="faculty", dashboard=faculty_dashboard(current_user))
+        return render_template("dashboard.html", role="student", dashboard=student_dashboard(current_user))
 
     @app.get("/admin")
     @role_required(UserRole.ADMIN.value)
     def admin_area():
-        return render_template("dashboard.html")
+        return render_template("dashboard.html", role="admin", dashboard=admin_dashboard())
 
     @app.cli.command("init-db")
     def init_db_command() -> None:
@@ -80,6 +90,13 @@ def create_app(config_class: type[Config] = Config) -> Flask:
             db.session.add(admin)
             db.session.commit()
         click.echo(f"Admin created: {admin_email}")
+
+    @app.cli.command("train-risk-model")
+    def train_risk_model_command() -> None:
+        """Train and persist the attendance-risk model."""
+        metadata = train_from_cli(Path(app.instance_path) / "ml_risk_model.joblib")
+        click.echo(f"Risk model trained from {metadata['data_source']} data.")
+        click.echo(f"Accuracy: {metadata['evaluation']['accuracy']}")
 
     return app
 

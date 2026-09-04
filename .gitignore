@@ -9,5 +9,6 @@ instance/*.db
 instance/*.sqlite
 *.sqlite3
 ml/saved_models/
+instance/ml_risk_model.joblib
 static/uploads/*
 !static/uploads/.gitkeep
