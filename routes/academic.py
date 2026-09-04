@@ -5,7 +5,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
-from models import Faculty, Student, Subject, Timetable, UserRole
+from models import Faculty, Student, StudentSubject, Subject, Timetable, UserRole
 from routes.auth import role_required
 from services.timetable_service import get_current_timetable_entry
 
@@ -61,7 +61,25 @@ def create_student():
 @role_required(UserRole.ADMIN.value, UserRole.FACULTY.value)
 def student_detail(student_id: int):
     student = db.get_or_404(Student, student_id)
-    return render_template("academic/student_detail.html", student=student)
+    subjects = db.session.scalars(db.select(Subject).where(Subject.is_active.is_(True)).order_by(Subject.subject_name)).all()
+    enrolled_subject_ids = {enrollment.subject_id for enrollment in student.subject_enrollments if enrollment.is_active}
+    return render_template("academic/student_detail.html", student=student, subjects=subjects, enrolled_subject_ids=enrolled_subject_ids)
+
+
+@academic_bp.post("/students/<int:student_id>/subjects")
+@role_required(UserRole.ADMIN.value)
+def update_student_subjects(student_id: int):
+    student = db.get_or_404(Student, student_id)
+    selected_ids = {int(value) for value in request.form.getlist("subject_ids")}
+    existing = {enrollment.subject_id: enrollment for enrollment in student.subject_enrollments}
+    for subject_id, enrollment in existing.items():
+        enrollment.is_active = subject_id in selected_ids
+    for subject_id in selected_ids - existing.keys():
+        if db.session.get(Subject, subject_id):
+            db.session.add(StudentSubject(student_id=student.id, subject_id=subject_id))
+    db.session.commit()
+    flash("Student subjects updated.", "success")
+    return redirect(url_for("academic.student_detail", student_id=student.id))
 
 
 @academic_bp.post("/students/<int:student_id>/deactivate")

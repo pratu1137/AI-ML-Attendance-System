@@ -5,6 +5,7 @@ from sqlalchemy import and_, func
 from extensions import db
 from models import Attendance, Faculty, Lecture, Student, Subject, Timetable, User
 from services.timetable_service import get_current_timetable_entry
+from services.timezone_service import local_now
 
 
 def _active_lecture(now: datetime):
@@ -23,7 +24,7 @@ def _active_lecture(now: datetime):
 
 
 def admin_dashboard(now: datetime | None = None) -> dict:
-    now = now or datetime.now()
+    now = now or local_now()
     active_lecture = _active_lecture(now)
     total_students = db.session.scalar(db.select(func.count(Student.id)).where(Student.is_active.is_(True))) or 0
     present_today = db.session.scalar(
@@ -55,7 +56,7 @@ def admin_dashboard(now: datetime | None = None) -> dict:
 
 
 def faculty_dashboard(user: User, now: datetime | None = None) -> dict:
-    now = now or datetime.now()
+    now = now or local_now()
     faculty = user.faculty_profile
     if not faculty:
         return {"faculty": None, "assigned_subjects": [], "todays_lectures": [], "current_lecture": None, "present_students": []}
@@ -84,7 +85,7 @@ def faculty_dashboard(user: User, now: datetime | None = None) -> dict:
 
 
 def student_dashboard(user: User, now: datetime | None = None) -> dict:
-    now = now or datetime.now()
+    now = now or local_now()
     student = user.student_profile
     if not student:
         return {"student": None, "today_records": [], "total_lectures": 0, "attended_lectures": 0, "attendance_percentage": 0.0}

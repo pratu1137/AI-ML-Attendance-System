@@ -18,16 +18,7 @@ def _model_path() -> Path:
 
 def _prediction(student: Student) -> dict:
     result = predict_student_risk(student, _model_path())
-    record = MLPrediction(
-        student_id=student.id,
-        risk_class=result["risk_class"],
-        high_risk_probability=result["high_risk_probability"],
-        features_json=json.dumps(result["features"], sort_keys=True),
-        data_source=result["data_source"],
-    )
-    db.session.add(record)
-    db.session.commit()
-    return {"student": student, "prediction": result, "record": record}
+    return {"student": student, "prediction": result}
 
 
 @ml_bp.get("/ml-risk")

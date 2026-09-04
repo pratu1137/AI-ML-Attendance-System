@@ -2,6 +2,7 @@ from io import BytesIO, StringIO
 
 import pandas as pd
 from flask import Blueprint, abort, current_app, jsonify, make_response, redirect, render_template, request, url_for
+from flask_login import current_user
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -16,13 +17,20 @@ analytics_bp = Blueprint("analytics", __name__)
 @analytics_bp.get("/analytics")
 @role_required(UserRole.ADMIN.value, UserRole.FACULTY.value, UserRole.STUDENT.value)
 def analytics():
-    return render_template("analytics/analytics.html", summary=analytics_summary())
+    if current_user.role == UserRole.STUDENT.value:
+        summary = analytics_summary(student_id=current_user.student_profile.id) if current_user.student_profile else analytics_summary(student_id=-1)
+    elif current_user.role == UserRole.FACULTY.value:
+        summary = analytics_summary(faculty_id=current_user.faculty_profile.id) if current_user.faculty_profile else analytics_summary(faculty_id=-1)
+    else:
+        summary = analytics_summary()
+    return render_template("analytics/analytics.html", summary=summary)
 
 
 @analytics_bp.get("/detain-list")
 @role_required(UserRole.ADMIN.value, UserRole.FACULTY.value)
 def detain_list():
-    rows = detain_rows()
+    faculty_id = current_user.faculty_profile.id if current_user.role == UserRole.FACULTY.value and current_user.faculty_profile else None
+    rows = detain_rows(faculty_id=faculty_id)
     risk_filter = request.args.get("risk", "").strip().upper()
     search = request.args.get("search", "").strip().lower()
     if risk_filter in {"DETAIN RISK", "WARNING", "SAFE"}:
@@ -55,9 +63,9 @@ def settings():
     return render_template("analytics/settings.html", settings=settings_record)
 
 
-def _report_rows(report_type: str) -> list[dict]:
+def _report_rows(report_type: str, faculty_id: int | None = None) -> list[dict]:
     if report_type == "attendance":
-        return attendance_rows()
+        return attendance_rows(faculty_id=faculty_id)
     if report_type == "detain":
         return [
             {
@@ -71,7 +79,7 @@ def _report_rows(report_type: str) -> list[dict]:
                 "attendance_percentage": row["percentage"],
                 "risk_status": row["risk_status"],
             }
-            for row in detain_rows()
+            for row in detain_rows(faculty_id=faculty_id)
         ]
     abort(404)
 
@@ -79,7 +87,8 @@ def _report_rows(report_type: str) -> list[dict]:
 @analytics_bp.get("/reports/<report_type>.<file_format>")
 @role_required(UserRole.ADMIN.value, UserRole.FACULTY.value)
 def report(report_type: str, file_format: str):
-    rows = _report_rows(report_type)
+    faculty_id = current_user.faculty_profile.id if current_user.role == UserRole.FACULTY.value and current_user.faculty_profile else None
+    rows = _report_rows(report_type, faculty_id=faculty_id)
     if file_format == "csv":
         output = StringIO()
         pd.DataFrame(rows).to_csv(output, index=False)

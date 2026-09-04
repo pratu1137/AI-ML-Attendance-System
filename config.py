@@ -23,6 +23,7 @@ class Config:
     ATTENDANCE_WINDOW_AFTER_MINUTES = int(os.getenv("ATTENDANCE_WINDOW_AFTER_MINUTES", "0"))
     ATTENDANCE_LATE_AFTER_MINUTES = int(os.getenv("ATTENDANCE_LATE_AFTER_MINUTES", "10"))
     TRUST_PROXY = os.getenv("TRUST_PROXY", "false").lower() == "true"
+    APP_TIMEZONE = os.getenv("APP_TIMEZONE", "Asia/Kolkata")
 
 
 class ProductionConfig(Config):

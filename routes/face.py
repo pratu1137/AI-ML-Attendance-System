@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
@@ -10,6 +11,8 @@ from services.attendance_service import mark_attendance
 from services.face_detector import face_detector
 from services.face_encoder import FaceEncodingError, face_encoder
 from services.face_recognizer import build_recognizer
+from services.timetable_service import get_attendance_timetable_entry
+from services.timezone_service import local_now
 
 face_bp = Blueprint("face", __name__)
 
@@ -109,6 +112,17 @@ def mark_attendance_from_frame():
                 "success": True, "recorded": False, "reason": "UNKNOWN_PERSON",
                 "faces_detected": 1, "faces": [faces[0].as_dict()], "distance": recognition.distance,
             })
+        if current_user.role == UserRole.STUDENT.value:
+            if not current_user.student_profile or current_user.student_profile.id != recognition.student.id:
+                return jsonify({"success": False, "recorded": False, "reason": "FORBIDDEN", "message": "Students may mark only their own attendance."}), 403
+        elif current_user.role == UserRole.FACULTY.value:
+            timetable_entry = get_attendance_timetable_entry(
+                local_now(),
+                current_app.config["ATTENDANCE_WINDOW_BEFORE_MINUTES"],
+                current_app.config["ATTENDANCE_WINDOW_AFTER_MINUTES"],
+            )
+            if not timetable_entry or timetable_entry.faculty.user_id != current_user.id:
+                return jsonify({"success": False, "recorded": False, "reason": "FORBIDDEN", "message": "Faculty may mark attendance only for their active lecture."}), 403
         result = mark_attendance(
             recognition.student,
             recognition.distance,

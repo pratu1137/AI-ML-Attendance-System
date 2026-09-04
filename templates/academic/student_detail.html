@@ -11,4 +11,25 @@
     <dt>Email</dt><dd>{{ student.email }}</dd>
     <dt>Status</dt><dd>{{ "Active" if student.is_active else "Inactive" }}</dd>
 </dl>
+{% if current_user.role == "ADMIN" %}
+<h2>Enrolled subjects</h2>
+<form method="post" action="{{ url_for('academic.update_student_subjects', student_id=student.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for subject in subjects %}<label><input type="checkbox" name="subject_ids" value="{{ subject.id }}" {% if subject.id in enrolled_subject_ids %}checked{% endif %}> {{ subject.subject_code }} - {{ subject.subject_name }}</label>{% else %}<p>No active subjects.</p>{% endfor %}
+    <button type="submit">Save enrolled subjects</button>
+</form>
+<h2>Edit student</h2>
+<form method="post" action="{{ url_for('academic.edit_student', student_id=student.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input name="student_id" value="{{ student.student_id }}" required>
+    <input name="roll_number" value="{{ student.roll_number }}" required>
+    <input name="full_name" value="{{ student.full_name }}" required>
+    <input name="branch" value="{{ student.branch }}" required>
+    <input name="year" type="number" value="{{ student.year }}" required>
+    <input name="division" value="{{ student.division }}" required>
+    <input name="email" type="email" value="{{ student.email }}" required>
+    <input name="phone" value="{{ student.phone or '' }}">
+    <button type="submit">Save changes</button>
+</form>
+{% endif %}
 {% endblock %}

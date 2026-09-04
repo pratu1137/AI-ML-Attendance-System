@@ -15,12 +15,18 @@ from routes.auth import auth_bp, role_required
 from routes.face import face_bp
 from routes.analytics import analytics_bp
 from routes.ml import ml_bp
+from routes.notifications import notifications_bp
 from ml.train_model import train_from_cli
 from services.dashboard_service import admin_dashboard, faculty_dashboard, student_dashboard
 
 
 def create_app(config_class: type[Config] = Config) -> Flask:
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(
+        __name__,
+        instance_relative_config=True,
+        static_folder="static",
+        static_url_path="/static",
+    )
     if config_class is ProductionConfig:
         config_class.validate()
     app.config.from_object(config_class)
@@ -39,6 +45,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     app.register_blueprint(face_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(ml_bp)
+    app.register_blueprint(notifications_bp)
 
     @app.errorhandler(RequestEntityTooLarge)
     def handle_oversized_upload(_error):
@@ -79,6 +86,13 @@ def create_app(config_class: type[Config] = Config) -> Flask:
             db.create_all()
         click.echo("Database initialized.")
 
+    @app.cli.command("upgrade-db")
+    def upgrade_db_command() -> None:
+        """Create missing tables without dropping existing application data."""
+        with app.app_context():
+            db.create_all()
+        click.echo("Database schema upgraded with missing tables preserved.")
+
     @app.cli.command("seed-admin")
     @click.option("--email", default=None, help="Admin email address.")
     @click.option("--password", default=None, help="Admin password.")
@@ -99,6 +113,24 @@ def create_app(config_class: type[Config] = Config) -> Flask:
             db.session.add(admin)
             db.session.commit()
         click.echo(f"Admin created: {admin_email}")
+
+    @app.cli.command("reset-admin")
+    def reset_admin_command() -> None:
+        """Interactively reset the configured development admin password."""
+        admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com").strip().lower()
+        with app.app_context():
+            admin = db.session.scalar(
+                db.select(User).where(User.email == admin_email, User.role == UserRole.ADMIN.value)
+            )
+            if admin is None:
+                raise click.ClickException(f"Development admin account not found: {admin_email}")
+
+            password = click.prompt("New admin password", hide_input=True, confirmation_prompt=True)
+            if not password:
+                raise click.UsageError("Password cannot be empty.")
+            admin.set_password(password)
+            db.session.commit()
+        click.echo(f"Development admin password reset for {admin_email}.")
 
     @app.cli.command("train-risk-model")
     def train_risk_model_command() -> None:

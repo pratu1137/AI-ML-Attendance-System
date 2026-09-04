@@ -1,13 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Sign in | Attendance System{% endblock %}
 {% block content %}
-<h1>Sign in</h1>
-<form method="post">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label for="email">Email</label>
-    <input id="email" name="email" type="email" required autocomplete="email">
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password" required autocomplete="current-password">
-    <button type="submit">Sign in</button>
-</form>
+<section class="auth-layout">
+    <div class="auth-intro"><p class="eyebrow">SMART CAMPUS ATTENDANCE</p><h1>Attendance,<br><em>made visible.</em></h1><p class="intro-copy">One calm workspace for live recognition, lecture records, and student attendance insight.</p><div class="intro-stat"><strong>10</strong><span>integrated project stages<br>from camera to insight</span></div></div>
+    <div class="auth-panel"><p class="eyebrow">WELCOME BACK</p><h2>Sign in</h2><p class="muted">Use your campus account to continue.</p><form method="post" class="stack-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="email">Email</label><input id="email" name="email" type="email" placeholder="you@college.edu" required autocomplete="email"><label for="password">Password</label><input id="password" name="password" type="password" placeholder="Enter your password" required autocomplete="current-password"><button class="button button-primary" type="submit">Sign in <span>→</span></button></form><p class="form-note">Protected by secure session authentication.</p></div>
+</section>
 {% endblock %}

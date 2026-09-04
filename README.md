@@ -53,6 +53,10 @@ recognition, active-student check, open attendance window, and lecture lookup.
 Attendance is classified as `PRESENT` or `LATE`, and a database uniqueness
 constraint prevents a student from being recorded twice for one lecture.
 
+Attendance also requires an active student-subject enrollment. Admins manage
+those relationships from the student detail page. Successful attendance creates
+an in-app notification visible at `/notifications`.
+
 Step 9 adds ML attendance-risk prediction at `/ml-risk` and
 `/api/ml-risk/<student_id>`. Run `flask --app app train-risk-model` to persist
 the Random Forest model. Because this project does not yet contain enough
@@ -87,3 +91,8 @@ pushes and pull requests.
 
 For schema changes, use Flask-Migrate in the deployment environment with
 `flask --app app db upgrade`; run migrations before starting new web workers.
+Fresh databases use the committed migration in `migrations/`. Existing
+development databases created with the older `init-db` command can use
+`flask --app app upgrade-db`; it creates missing tables additively and does not
+delete attendance data. Set `APP_TIMEZONE` (default `Asia/Kolkata`) consistently
+across web workers and migration/maintenance commands.

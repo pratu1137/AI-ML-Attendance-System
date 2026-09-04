@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Notifications | Attendance System{% endblock %}
+{% block content %}
+<h1>Notifications</h1>
+<ul>{% for notification in notifications %}<li><strong>{{ notification.title }}</strong><br>{{ notification.message }}<br>{{ notification.created_at }}{% if not notification.read_at %}<form method="post" action="{{ url_for('notifications.mark_read', notification_id=notification.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Mark as read</button></form>{% else %}<span>Read</span>{% endif %}</li>{% else %}<li>No notifications.</li>{% endfor %}</ul>
+{% endblock %}

@@ -4,23 +4,47 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Attendance System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='2') }}">
 </head>
 <body>
-    <header>
-        <a href="{{ url_for('dashboard') }}">Attendance System</a>
-        {% if current_user.is_authenticated %}
-        <span>{{ current_user.email }} ({{ current_user.role }})</span>
-        <form method="post" action="{{ url_for('auth.logout') }}" style="display:inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Sign out</button>
-        </form>
-        {% endif %}
+    {% if current_user.is_authenticated %}
+    <header class="topbar">
+        <button class="menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" data-menu-toggle>☰</button>
+        <a class="brand" href="{{ url_for('dashboard') }}"><span class="brand-mark">A</span><span>Attend<span class="brand-accent">AI</span></span></a>
+        <div class="topbar-actions">
+            <span class="profile-chip"><span class="avatar">{{ current_user.email[0]|upper }}</span><span><strong>{{ current_user.email }}</strong><small>{{ current_user.role|title }}</small></span></span>
+            <form method="post" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="button button-quiet" type="submit">Sign out</button>
+            </form>
+        </div>
     </header>
+    <aside class="sidebar" data-sidebar>
+        <nav class="sidebar-nav" aria-label="Primary navigation">
+            <a href="{{ url_for('dashboard') }}">⌂ <span>Dashboard</span></a>
+            {% if current_user.role == 'ADMIN' %}
+            <a href="{{ url_for('academic.students') }}">◉ <span>Students</span></a>
+            <a href="{{ url_for('academic.subjects') }}">▣ <span>Subjects</span></a>
+            <a href="{{ url_for('academic.timetable') }}">◷ <span>Timetable</span></a>
+            <a href="{{ url_for('face.enrollment_page') }}">◌ <span>Face enrollment</span></a>
+            {% endif %}
+            <a href="{{ url_for('face.live_attendance') }}">◉ <span>Live attendance</span></a>
+            <a href="{{ url_for('analytics.analytics') }}">▥ <span>Analytics</span></a>
+            {% if current_user.role in ['ADMIN', 'FACULTY'] %}<a href="{{ url_for('analytics.detain_list') }}">△ <span>Risk list</span></a>{% endif %}
+            {% if current_user.role == 'STUDENT' %}<a href="{{ url_for('notifications.notifications') }}">◇ <span>Notifications</span></a>{% endif %}
+            {% if current_user.role == 'ADMIN' %}<a href="{{ url_for('analytics.settings') }}">⚙ <span>Settings</span></a>{% endif %}
+        </nav>
+        <div class="sidebar-footer">AI attendance workspace<br><small>Secure campus operations</small></div>
+    </aside>
+    {% else %}
+    <header class="public-header"><a class="brand" href="{{ url_for('auth.login') }}"><span class="brand-mark">A</span><span>Attend<span class="brand-accent">AI</span></span></a></header>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
             <p role="alert" data-category="{{ category }}">{{ message }}</p>
         {% endfor %}
     {% endwith %}
-    <main>{% block content %}{% endblock %}</main>
+    <main class="page-shell"><div class="page-content">{% block content %}{% endblock %}</div></main>
+    <script src="{{ url_for('static', filename='js/app.js', v='2') }}"></script>
 </body>
 </html>

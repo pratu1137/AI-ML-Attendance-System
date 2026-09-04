@@ -1,7 +1,7 @@
 from datetime import datetime, time
 
 from extensions import db
-from models import Attendance, Faculty, Student, Subject, Timetable, User, UserRole
+from models import Attendance, Faculty, Notification, Student, StudentSubject, Subject, Timetable, User, UserRole
 from services.attendance_service import mark_attendance
 
 
@@ -14,7 +14,10 @@ def setup_schedule(app):
         subject = Subject(subject_id="SUB-1", subject_code="CS101", subject_name="Algorithms", semester=2, department="CS")
         db.session.add_all([faculty_user, student, faculty, subject])
         db.session.flush()
-        db.session.add(Timetable(day_of_week=0, subject_id=subject.id, faculty_id=faculty.id, room="A-1", start_time=time(10), end_time=time(11)))
+        db.session.add_all([
+            Timetable(day_of_week=0, subject_id=subject.id, faculty_id=faculty.id, room="A-1", start_time=time(10), end_time=time(11)),
+            StudentSubject(student_id=student.id, subject_id=subject.id),
+        ])
         db.session.commit()
         return student.id
 
@@ -31,6 +34,7 @@ def test_attendance_is_recorded_once_with_late_status(app):
         assert first.attendance.status == "LATE"
         assert duplicate.code == "ALREADY_RECORDED"
         assert db.session.scalar(db.select(db.func.count(Attendance.id))) == 1
+        assert db.session.scalar(db.select(db.func.count(Notification.id))) == 1
 
 
 def test_attendance_is_present_before_late_cutoff(app):

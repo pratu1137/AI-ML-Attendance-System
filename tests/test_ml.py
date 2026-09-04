@@ -7,7 +7,7 @@ from extensions import db
 from ml.feature_engineering import FEATURE_NAMES, features_for_student
 from ml.predict_risk import predict_student_risk
 from ml.train_model import train_model
-from models import MLPrediction, Student, User, UserRole
+from models import Student, User, UserRole
 
 
 def test_training_uses_labeled_demo_fallback_and_evaluates(tmp_path):
@@ -48,5 +48,3 @@ def test_student_can_view_only_own_ml_risk(app, client):
     assert own.status_code == 200
     assert own.get_json()["data_source"] == "DEMO_SYNTHETIC"
     assert other_response.status_code == 403
-    with app.app_context():
-        assert db.session.scalar(db.select(MLPrediction)) is not None

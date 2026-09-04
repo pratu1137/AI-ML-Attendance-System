@@ -26,6 +26,20 @@ class Student(db.Model):
     user = db.relationship("User", backref=db.backref("student_profile", uselist=False))
 
 
+class StudentSubject(db.Model):
+    __tablename__ = "student_subjects"
+    __table_args__ = (db.UniqueConstraint("student_id", "subject_id", name="uq_student_subject"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False, index=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
+    enrolled_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    student = db.relationship("Student", backref="subject_enrollments")
+    subject = db.relationship("Subject", backref="student_enrollments")
+
+
 class Faculty(db.Model):
     __tablename__ = "faculty"
 
@@ -154,3 +168,17 @@ class MLPrediction(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     student = db.relationship("Student", backref="ml_predictions")
+
+
+class Notification(db.Model):
+    __tablename__ = "notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False, index=True)
+    notification_type = db.Column(db.String(40), nullable=False)
+    title = db.Column(db.String(150), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    read_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    student = db.relationship("Student", backref="notifications")

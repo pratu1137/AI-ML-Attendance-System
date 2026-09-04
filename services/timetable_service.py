@@ -4,11 +4,12 @@ from sqlalchemy import and_, or_
 
 from extensions import db
 from models import Timetable
+from services.timezone_service import localize, local_now
 
 
 def get_current_timetable_entry(current_datetime: datetime | None = None) -> Timetable | None:
     """Return the recurring timetable entry active at the supplied local time."""
-    current_datetime = current_datetime or datetime.now()
+    current_datetime = localize(current_datetime) if current_datetime else local_now()
     current_time = current_datetime.time().replace(tzinfo=None)
     return db.session.scalar(
         db.select(Timetable)
@@ -30,6 +31,7 @@ def get_attendance_timetable_entry(
     window_after_minutes: int = 0,
 ) -> Timetable | None:
     """Return a timetable entry whose configurable attendance window is open."""
+    current_datetime = localize(current_datetime)
     entries = db.session.scalars(
         db.select(Timetable)
         .where(Timetable.is_active.is_(True), Timetable.day_of_week == current_datetime.weekday())

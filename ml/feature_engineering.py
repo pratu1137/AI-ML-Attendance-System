@@ -4,6 +4,7 @@ from sqlalchemy import func
 
 from extensions import db
 from models import Attendance, Lecture, Student
+from services.timezone_service import local_now
 
 FEATURE_NAMES = [
     "attendance_percentage",
@@ -17,7 +18,7 @@ FEATURE_NAMES = [
 
 
 def features_for_student(student: Student, as_of: date | None = None) -> dict[str, float]:
-    as_of = as_of or date.today()
+    as_of = as_of or local_now().date()
     lectures = db.session.scalars(
         db.select(Lecture).where(Lecture.lecture_date <= as_of, Lecture.status != "SCHEDULED").order_by(Lecture.lecture_date)
     ).all()

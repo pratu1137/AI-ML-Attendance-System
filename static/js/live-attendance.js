@@ -2,6 +2,7 @@
     const video = document.getElementById("camera");
     const overlay = document.getElementById("face-overlay");
     const status = document.getElementById("camera-status");
+    const facesDetected = document.getElementById("faces-detected");
     const result = document.getElementById("detection-result");
     const startButton = document.getElementById("start-camera");
     const stopButton = document.getElementById("stop-camera");
@@ -50,18 +51,19 @@
             const payload = await response.json();
             if (!response.ok || !payload.success) throw new Error(payload.error || "Detection request failed.");
             drawFaces(payload.faces);
+            facesDetected.textContent = String(payload.faces_detected || 0);
             if (payload.recorded) {
                 result.textContent = `${payload.message} (${payload.attendance.status})`;
             } else if (payload.reason === "NO_FACE") {
-                result.textContent = "No face detected.";
+                result.textContent = "Searching for face...";
             } else if (payload.reason === "MULTIPLE_FACES") {
-                result.textContent = "Multiple faces detected.";
+                result.textContent = "Multiple faces detected - please keep only one person in frame.";
             } else if (payload.reason === "ALREADY_RECORDED") {
                 result.textContent = payload.message;
             } else if (payload.reason === "NO_ACTIVE_LECTURE") {
                 result.textContent = "NO ACTIVE LECTURE";
             } else {
-                result.textContent = "UNKNOWN PERSON";
+                result.textContent = "Unknown student";
             }
         } catch (error) {
             result.textContent = error.message || "Network error while processing the frame.";
@@ -97,6 +99,7 @@
         stream = null;
         video.srcObject = null;
         clearOverlay();
+        facesDetected.textContent = "0";
         setStatus("OFFLINE");
         startButton.disabled = false;
         stopButton.disabled = true;

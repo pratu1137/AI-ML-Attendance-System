@@ -4,8 +4,10 @@ from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
-from models import Attendance, Lecture, Student
+from models import Attendance, Lecture, Student, StudentSubject
+from services.notification_service import create_attendance_notification
 from services.timetable_service import get_attendance_timetable_entry
+from services.timezone_service import localize, local_now
 
 
 @dataclass(frozen=True)
@@ -49,12 +51,19 @@ def mark_attendance(
     window_after_minutes: int = 0,
     late_after_minutes: int = 10,
 ) -> AttendanceResult:
-    current_datetime = current_datetime or datetime.now()
+    current_datetime = localize(current_datetime) if current_datetime else local_now()
     if not student.is_active:
         return AttendanceResult(False, "INACTIVE_STUDENT", "Student account is inactive.")
     timetable_entry = get_attendance_timetable_entry(current_datetime, window_before_minutes, window_after_minutes)
     if not timetable_entry:
         return AttendanceResult(False, "NO_ACTIVE_LECTURE", "NO ACTIVE LECTURE")
+    enrolled = db.session.scalar(db.select(StudentSubject).where(
+        StudentSubject.student_id == student.id,
+        StudentSubject.subject_id == timetable_entry.subject_id,
+        StudentSubject.is_active.is_(True),
+    ))
+    if not enrolled:
+        return AttendanceResult(False, "NOT_ENROLLED", "Student is not enrolled in this subject.")
 
     lecture_start = datetime.combine(current_datetime.date(), timetable_entry.start_time)
 
@@ -75,6 +84,7 @@ def mark_attendance(
         recognition_distance=recognition_distance,
     )
     db.session.add(attendance)
+    create_attendance_notification(student, attendance, lecture)
     try:
         db.session.commit()
     except IntegrityError:

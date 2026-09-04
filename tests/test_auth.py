@@ -86,3 +86,23 @@ def test_admin_area_allows_admin_users(app, client):
     response = client.get("/admin")
 
     assert response.status_code == 200
+
+
+def test_reset_admin_command_changes_password_without_printing_it(app, client):
+    create_user(app, password="old-password")
+    runner = app.test_cli_runner()
+
+    result = runner.invoke(args=["reset-admin"], input="new-password\nnew-password\n")
+
+    assert result.exit_code == 0
+    assert "new-password" not in result.output
+    assert "admin@example.com" in result.output
+    response = client.post("/login", data={"email": "admin@example.com", "password": "new-password"})
+    assert response.status_code == 302
+
+
+def test_reset_admin_command_reports_missing_admin(app):
+    result = app.test_cli_runner().invoke(args=["reset-admin"], input="unused\nunused\n")
+
+    assert result.exit_code != 0
+    assert "Development admin account not found" in result.output

@@ -9,6 +9,8 @@
 <table><thead><tr><th>Date</th><th>Present</th><th>Total</th><th>Percentage</th></tr></thead><tbody>{% for row in summary.daily %}<tr><td>{{ row.date }}</td><td>{{ row.present }}</td><td>{{ row.total }}</td><td>{{ row.percentage }}%</td></tr>{% else %}<tr><td colspan="4">No conducted lectures.</td></tr>{% endfor %}</tbody></table>
 <h2>Subject attendance</h2>
 <table><thead><tr><th>Subject</th><th>Present</th><th>Total</th><th>Percentage</th></tr></thead><tbody>{% for row in summary.subjects %}<tr><td>{{ row.subject_code }}</td><td>{{ row.present }}</td><td>{{ row.total }}</td><td>{{ row.percentage }}%</td></tr>{% else %}<tr><td colspan="4">No subject data.</td></tr>{% endfor %}</tbody></table>
+<h2>Monthly attendance</h2>
+<table><thead><tr><th>Month</th><th>Present</th><th>Total</th><th>Percentage</th></tr></thead><tbody>{% for row in summary.monthly %}<tr><td>{{ row.month }}</td><td>{{ row.present }}</td><td>{{ row.total }}</td><td>{{ row.percentage }}%</td></tr>{% else %}<tr><td colspan="4">No monthly data.</td></tr>{% endfor %}</tbody></table>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>window.analyticsData = {{ {"daily": summary.daily, "subjects": summary.subjects}|tojson }};</script>
 <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
