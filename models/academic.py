@@ -111,3 +111,22 @@ class FaceEnrollment(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     student = db.relationship("Student", backref=db.backref("face_enrollment", uselist=False))
+
+
+class Attendance(db.Model):
+    __tablename__ = "attendance"
+    __table_args__ = (
+        db.UniqueConstraint("student_id", "lecture_id", name="uq_attendance_student_lecture"),
+        db.Index("ix_attendance_lecture_status", "lecture_id", "status"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
+    lecture_id = db.Column(db.Integer, db.ForeignKey("lectures.id"), nullable=False)
+    attendance_date = db.Column(db.Date, nullable=False, index=True)
+    check_in_time = db.Column(db.DateTime(timezone=True), nullable=False)
+    status = db.Column(db.String(20), nullable=False)
+    recognition_distance = db.Column(db.Float, nullable=True)
+
+    student = db.relationship("Student", backref="attendance_records")
+    lecture = db.relationship("Lecture", backref="attendance_records")

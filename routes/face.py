@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from extensions import db
 from models import FaceEnrollment, Student, UserRole
 from routes.auth import role_required
+from services.attendance_service import mark_attendance
 from services.face_detector import face_detector
 from services.face_encoder import FaceEncodingError, face_encoder
 from services.face_recognizer import build_recognizer
@@ -85,6 +86,58 @@ def recognize_face():
             "division": result.student.division,
         }
     return jsonify(response)
+
+
+@face_bp.post("/api/attendance/mark")
+@role_required(UserRole.ADMIN.value, UserRole.FACULTY.value, UserRole.STUDENT.value)
+def mark_attendance_from_frame():
+    frame = request.files.get("frame")
+    if frame is None or not frame.filename:
+        return jsonify({"success": False, "error": "A frame image is required."}), 400
+    image_bytes = frame.read()
+    if not image_bytes:
+        return jsonify({"success": False, "error": "The frame image is empty."}), 400
+    try:
+        faces = face_detector.detect(image_bytes)
+        if len(faces) != 1:
+            reason = "NO_FACE" if not faces else "MULTIPLE_FACES"
+            return jsonify({"success": True, "recorded": False, "reason": reason, "faces_detected": len(faces), "faces": [face.as_dict() for face in faces]})
+        encoding = face_encoder.encode_sample(image_bytes, faces[0])
+        recognition = build_recognizer(current_app.config["FACE_RECOGNITION_THRESHOLD"]).recognize(encoding)
+        if not recognition.recognized or not recognition.student:
+            return jsonify({
+                "success": True, "recorded": False, "reason": "UNKNOWN_PERSON",
+                "faces_detected": 1, "faces": [faces[0].as_dict()], "distance": recognition.distance,
+            })
+        result = mark_attendance(
+            recognition.student,
+            recognition.distance,
+            window_before_minutes=current_app.config["ATTENDANCE_WINDOW_BEFORE_MINUTES"],
+            window_after_minutes=current_app.config["ATTENDANCE_WINDOW_AFTER_MINUTES"],
+            late_after_minutes=current_app.config["ATTENDANCE_LATE_AFTER_MINUTES"],
+        )
+    except (FaceEncodingError, ValueError) as error:
+        return jsonify({"success": False, "error": str(error)}), 400
+    except RuntimeError:
+        return jsonify({"success": False, "error": "Face recognition is temporarily unavailable."}), 503
+
+    response = {
+        "success": True,
+        "recorded": result.success,
+        "reason": result.code,
+        "message": result.message,
+        "faces_detected": 1,
+        "faces": [faces[0].as_dict()],
+        "distance": recognition.distance,
+    }
+    if result.attendance:
+        response["attendance"] = {
+            "id": result.attendance.id,
+            "status": result.attendance.status,
+            "check_in_time": result.attendance.check_in_time.isoformat(),
+            "lecture_id": result.attendance.lecture_id,
+        }
+    return jsonify(response), 200 if result.success or result.code == "ALREADY_RECORDED" else 409 if result.code == "ALREADY_RECORDED" else 400
 
 
 @face_bp.get("/face-enrollment")

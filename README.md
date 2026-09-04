@@ -41,3 +41,14 @@ Step 3 adds browser webcam face detection at `/live-attendance`. Step 4 adds
 admin-only enrollment at `/face-enrollment`; it requires consent and three
 quality-checked samples, stores only a derived representation, and supports
 deactivation of an enrollment.
+
+Step 5 adds `/api/face/recognize`. It compares one detected face against active
+enrollments for active students using a configurable Euclidean-distance
+threshold (`FACE_RECOGNITION_THRESHOLD`, default `0.75`). The API reports a
+distance and match reason, not a calibrated probability, and never exposes the
+stored representation.
+
+Step 6 adds `/api/attendance/mark`. It records attendance only after a reliable
+recognition, active-student check, open attendance window, and lecture lookup.
+Attendance is classified as `PRESENT` or `LATE`, and a database uniqueness
+constraint prevents a student from being recorded twice for one lecture.

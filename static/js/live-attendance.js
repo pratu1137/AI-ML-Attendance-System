@@ -42,7 +42,7 @@
             const blob = await new Promise((resolve) => captureCanvas.toBlob(resolve, "image/jpeg", 0.8));
             const formData = new FormData();
             formData.append("frame", blob, "camera-frame.jpg");
-            const response = await fetch("/api/face/detect", {
+            const response = await fetch("/api/attendance/mark", {
                 method: "POST",
                 headers: { "X-CSRFToken": csrfToken },
                 body: formData,
@@ -50,7 +50,19 @@
             const payload = await response.json();
             if (!response.ok || !payload.success) throw new Error(payload.error || "Detection request failed.");
             drawFaces(payload.faces);
-            result.textContent = `${payload.faces_detected} face${payload.faces_detected === 1 ? "" : "s"} detected.`;
+            if (payload.recorded) {
+                result.textContent = `${payload.message} (${payload.attendance.status})`;
+            } else if (payload.reason === "NO_FACE") {
+                result.textContent = "No face detected.";
+            } else if (payload.reason === "MULTIPLE_FACES") {
+                result.textContent = "Multiple faces detected.";
+            } else if (payload.reason === "ALREADY_RECORDED") {
+                result.textContent = payload.message;
+            } else if (payload.reason === "NO_ACTIVE_LECTURE") {
+                result.textContent = "NO ACTIVE LECTURE";
+            } else {
+                result.textContent = "UNKNOWN PERSON";
+            }
         } catch (error) {
             result.textContent = error.message || "Network error while processing the frame.";
         } finally {

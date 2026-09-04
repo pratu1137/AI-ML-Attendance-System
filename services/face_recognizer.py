@@ -4,7 +4,7 @@ import numpy as np
 
 from extensions import db
 from models import FaceEnrollment, Student
-from services.face_encoder import FaceEncoding
+from services.face_encoder import FaceEncoder, FaceEncoding
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,8 @@ class FaceRecognizer:
         best_student = None
         best_distance = None
         for enrollment in enrollments:
+            if enrollment.representation_version != FaceEncoder.version:
+                continue
             stored = np.frombuffer(enrollment.representation, dtype=np.float32)
             if stored.shape != encoding.vector.shape or not np.all(np.isfinite(stored)):
                 continue
