@@ -36,3 +36,8 @@ can create, search, view, edit, and deactivate academic records. The
 `/api/current-lecture` endpoint resolves the active recurring timetable entry
 from the local weekday and time, using a half-open interval where the start is
 included and the end is excluded.
+
+Step 3 adds browser webcam face detection at `/live-attendance`. Step 4 adds
+admin-only enrollment at `/face-enrollment`; it requires consent and three
+quality-checked samples, stores only a derived representation, and supports
+deactivation of an enrollment.

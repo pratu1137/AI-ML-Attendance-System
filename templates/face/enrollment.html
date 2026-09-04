@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Face Enrollment | Attendance System{% endblock %}
+{% block content %}
+<h1>Face enrollment</h1>
+<p>Obtain the student's consent before capturing samples. Face samples are processed into a representation and raw camera frames are not stored.</p>
+<label for="student">Student</label>
+<select id="student">
+    <option value="">Select a student</option>
+    {% for student in students %}
+    <option value="{{ student.student_id }}" {% if student.id in enrolled_ids %}disabled{% endif %}>{{ student.full_name }} ({{ student.student_id }}){% if student.id in enrolled_ids %} - enrolled{% endif %}</option>
+    {% endfor %}
+</select>
+<label><input id="consent" type="checkbox"> Student consent received</label>
+<video id="enrollment-camera" autoplay playsinline muted style="display:block;max-width:720px;width:100%"></video>
+<p id="enrollment-status" role="status">OFFLINE</p>
+<p id="sample-count">Samples: 0 / 3</p>
+<button id="start-enrollment" type="button">Start camera</button>
+<button id="capture-sample" type="button" disabled>Capture sample</button>
+<button id="submit-enrollment" type="button" disabled>Complete enrollment</button>
+<input id="csrf-token" type="hidden" value="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='js/face-enrollment.js') }}"></script>
+{% endblock %}

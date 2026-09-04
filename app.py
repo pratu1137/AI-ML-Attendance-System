@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 
 import click
-from flask import Flask, redirect, render_template, url_for
+from flask import Flask, jsonify, redirect, render_template, url_for
+from werkzeug.exceptions import RequestEntityTooLarge
 from flask_login import current_user, login_required
 
 from config import Config
@@ -10,11 +11,13 @@ from extensions import csrf, db, login_manager, migrate
 from models import User, UserRole
 from routes.academic import academic_bp
 from routes.auth import auth_bp, role_required
+from routes.face import face_bp
 
 
 def create_app(config_class: type[Config] = Config) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
+    app.config.setdefault("MAX_CONTENT_LENGTH", 5 * 1024 * 1024)
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
@@ -24,6 +27,11 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(academic_bp)
+    app.register_blueprint(face_bp)
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_oversized_upload(_error):
+        return jsonify({"success": False, "error": "The camera frame is too large."}), 413
 
     @login_manager.user_loader
     def load_user(user_id: str) -> User | None:

@@ -92,3 +92,22 @@ class Lecture(db.Model):
 
     subject = db.relationship("Subject", backref="lectures")
     faculty = db.relationship("Faculty", backref="lectures")
+
+
+class FaceEnrollment(db.Model):
+    __tablename__ = "face_enrollments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), unique=True, nullable=False, index=True)
+    representation = db.Column(db.LargeBinary, nullable=False)
+    representation_version = db.Column(db.String(30), nullable=False, default="gray128-l2-v1")
+    sample_count = db.Column(db.Integer, nullable=False)
+    consent_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    enrolled_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    student = db.relationship("Student", backref=db.backref("face_enrollment", uselist=False))
