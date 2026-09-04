@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+.env
+instance/*.db
+instance/*.sqlite
+ml/saved_models
+static/uploads
+tests

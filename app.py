@@ -4,9 +4,10 @@ from pathlib import Path
 import click
 from flask import Flask, jsonify, redirect, render_template, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_login import current_user, login_required
 
-from config import Config
+from config import Config, ProductionConfig
 from extensions import csrf, db, login_manager, migrate
 from models import User, UserRole
 from routes.academic import academic_bp
@@ -20,7 +21,11 @@ from services.dashboard_service import admin_dashboard, faculty_dashboard, stude
 
 def create_app(config_class: type[Config] = Config) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
+    if config_class is ProductionConfig:
+        config_class.validate()
     app.config.from_object(config_class)
+    if app.config.get("TRUST_PROXY"):
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
     app.config.setdefault("MAX_CONTENT_LENGTH", 5 * 1024 * 1024)
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
@@ -48,6 +53,10 @@ def create_app(config_class: type[Config] = Config) -> Flask:
         if current_user.is_authenticated:
             return redirect(url_for("dashboard"))
         return redirect(url_for("auth.login"))
+
+    @app.get("/healthz")
+    def healthcheck():
+        return jsonify({"status": "ok"})
 
     @app.get("/dashboard")
     @login_required

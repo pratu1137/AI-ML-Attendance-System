@@ -59,3 +59,31 @@ the Random Forest model. Because this project does not yet contain enough
 labeled historical examples, training uses deterministic data labeled
 `DEMO_SYNTHETIC`; predictions expose that source and evaluation metrics. ML is
 decision support only and does not make detention decisions.
+
+## Step 10: Production Preparation
+
+### Local verification
+
+```bash
+python3 -m pytest -q
+python3 -m flask --app app routes
+```
+
+The application exposes `/healthz` for platform health checks. Production uses
+`wsgi:app` behind Gunicorn:
+
+```bash
+SECRET_KEY="a-long-random-secret" \
+DATABASE_URL="postgresql+psycopg://user:password@host/database" \
+TRUST_PROXY=true \
+gunicorn --config gunicorn.conf.py wsgi:app
+```
+
+Set `SECRET_KEY` and `DATABASE_URL` in the deployment platform's secret
+configuration. Never commit `.env`, database credentials, model artifacts, or
+uploaded files. The included `Dockerfile` runs as a non-root user, and
+`.github/workflows/ci.yml` runs the test suite and Python compilation checks on
+pushes and pull requests.
+
+For schema changes, use Flask-Migrate in the deployment environment with
+`flask --app app db upgrade`; run migrations before starting new web workers.
