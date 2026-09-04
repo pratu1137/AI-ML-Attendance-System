@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
@@ -8,6 +8,7 @@ from models import FaceEnrollment, Student, UserRole
 from routes.auth import role_required
 from services.face_detector import face_detector
 from services.face_encoder import FaceEncodingError, face_encoder
+from services.face_recognizer import build_recognizer
 
 face_bp = Blueprint("face", __name__)
 
@@ -41,6 +42,49 @@ def detect_faces():
         "faces_detected": len(faces),
         "faces": [face.as_dict() for face in faces],
     })
+
+
+@face_bp.post("/api/face/recognize")
+@role_required(UserRole.ADMIN.value, UserRole.FACULTY.value, UserRole.STUDENT.value)
+def recognize_face():
+    frame = request.files.get("frame")
+    if frame is None or not frame.filename:
+        return jsonify({"success": False, "error": "A frame image is required."}), 400
+    image_bytes = frame.read()
+    if not image_bytes:
+        return jsonify({"success": False, "error": "The frame image is empty."}), 400
+    try:
+        faces = face_detector.detect(image_bytes)
+        if len(faces) == 0:
+            return jsonify({"success": True, "recognized": False, "reason": "NO_FACE", "faces_detected": 0, "faces": []})
+        if len(faces) > 1:
+            return jsonify({"success": True, "recognized": False, "reason": "MULTIPLE_FACES", "faces_detected": len(faces), "faces": [face.as_dict() for face in faces]})
+        encoding = face_encoder.encode_sample(image_bytes, faces[0])
+        result = build_recognizer(current_app.config["FACE_RECOGNITION_THRESHOLD"]).recognize(encoding)
+    except (FaceEncodingError, ValueError) as error:
+        return jsonify({"success": False, "error": str(error)}), 400
+    except RuntimeError:
+        return jsonify({"success": False, "error": "Face recognition is temporarily unavailable."}), 503
+
+    response = {
+        "success": True,
+        "recognized": result.recognized,
+        "faces_detected": 1,
+        "faces": [faces[0].as_dict()],
+        "reason": "MATCH" if result.recognized else "UNKNOWN_PERSON",
+        "distance": result.distance,
+        "threshold": current_app.config["FACE_RECOGNITION_THRESHOLD"],
+    }
+    if result.recognized and result.student:
+        response["student"] = {
+            "student_id": result.student.student_id,
+            "roll_number": result.student.roll_number,
+            "full_name": result.student.full_name,
+            "branch": result.student.branch,
+            "year": result.student.year,
+            "division": result.student.division,
+        }
+    return jsonify(response)
 
 
 @face_bp.get("/face-enrollment")
