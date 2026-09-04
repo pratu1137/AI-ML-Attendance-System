@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Student | Attendance System{% endblock %}
+{% block content %}
+<h1>{{ student.full_name }}</h1>
+<dl>
+    <dt>Student ID</dt><dd>{{ student.student_id }}</dd>
+    <dt>Roll Number</dt><dd>{{ student.roll_number }}</dd>
+    <dt>Branch</dt><dd>{{ student.branch }}</dd>
+    <dt>Year</dt><dd>{{ student.year }}</dd>
+    <dt>Division</dt><dd>{{ student.division }}</dd>
+    <dt>Email</dt><dd>{{ student.email }}</dd>
+    <dt>Status</dt><dd>{{ "Active" if student.is_active else "Inactive" }}</dd>
+</dl>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Timetable | Attendance System{% endblock %}
+{% block content %}
+<h1>Timetable</h1>
+<form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="day_of_week">Day (0 Monday - 6 Sunday)</label><input id="day_of_week" name="day_of_week" type="number" min="0" max="6" required>
+    <label for="subject_id">Subject</label><select id="subject_id" name="subject_id" required>{% for subject in subjects %}<option value="{{ subject.id }}">{{ subject.subject_code }} - {{ subject.subject_name }}</option>{% endfor %}</select>
+    <label for="faculty_id">Faculty</label><select id="faculty_id" name="faculty_id" required>{% for person in faculty %}<option value="{{ person.id }}">{{ person.full_name }}</option>{% endfor %}</select>
+    <label for="room">Room</label><input id="room" name="room" required>
+    <label for="start_time">Start time</label><input id="start_time" name="start_time" type="time" required>
+    <label for="end_time">End time</label><input id="end_time" name="end_time" type="time" required>
+    <button type="submit">Add timetable entry</button>
+</form>
+<ul>{% for entry in entries %}<li>{{ entry.day_of_week }}: {{ entry.subject.subject_code }} with {{ entry.faculty.full_name }} ({{ entry.start_time }}-{{ entry.end_time }})</li>{% else %}<li>No timetable entries found.</li>{% endfor %}</ul>
+{% endblock %}

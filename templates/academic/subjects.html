@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Subjects | Attendance System{% endblock %}
+{% block content %}
+<h1>Subjects</h1>
+<form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for name, label, type in [("subject_id", "Subject ID", "text"), ("subject_code", "Subject Code", "text"), ("subject_name", "Subject Name", "text"), ("semester", "Semester", "number"), ("department", "Department", "text")] %}
+    <label for="{{ name }}">{{ label }}</label><input id="{{ name }}" name="{{ name }}" type="{{ type }}" required>
+    {% endfor %}
+    <button type="submit">Add subject</button>
+</form>
+<ul>{% for subject in subjects %}<li>{{ subject.subject_code }} - {{ subject.subject_name }} (Semester {{ subject.semester }})</li>{% else %}<li>No subjects found.</li>{% endfor %}</ul>
+{% endblock %}
