@@ -9,5 +9,16 @@
     {% endfor %}
     <button type="submit">Add subject</button>
 </form>
-<ul>{% for subject in subjects %}<li>{{ subject.subject_code }} - {{ subject.subject_name }} (Semester {{ subject.semester }})</li>{% else %}<li>No subjects found.</li>{% endfor %}</ul>
+<ul>{% for subject in subjects %}<li>{{ subject.subject_code }} - {{ subject.subject_name }} (Semester {{ subject.semester }}) - {{ "Active" if subject.is_active else "Inactive" }}
+    <form method="post" action="{{ url_for('academic.edit_subject', subject_id=subject.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input name="subject_id" value="{{ subject.subject_id }}" required>
+        <input name="subject_code" value="{{ subject.subject_code }}" required>
+        <input name="subject_name" value="{{ subject.subject_name }}" required>
+        <input name="semester" type="number" min="1" value="{{ subject.semester }}" required>
+        <input name="department" value="{{ subject.department }}" required>
+        <button type="submit">Save</button>
+    </form>
+    <form method="post" action="{{ url_for('academic.toggle_subject_active', subject_id=subject.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">{{ "Deactivate" if subject.is_active else "Activate" }}</button></form>
+</li>{% else %}<li>No subjects found.</li>{% endfor %}</ul>
 {% endblock %}

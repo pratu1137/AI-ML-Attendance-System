@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from sqlalchemy import func
 
 from extensions import db
-from models import Attendance, Lecture, Student
+from models import Attendance, Lecture, Student, StudentSubject
 from services.timezone_service import local_now
 
 FEATURE_NAMES = [
@@ -20,8 +20,16 @@ FEATURE_NAMES = [
 def features_for_student(student: Student, as_of: date | None = None) -> dict[str, float]:
     as_of = as_of or local_now().date()
     lectures = db.session.scalars(
-        db.select(Lecture).where(Lecture.lecture_date <= as_of, Lecture.status != "SCHEDULED").order_by(Lecture.lecture_date)
-    ).all()
+        db.select(Lecture)
+        .join(StudentSubject, StudentSubject.subject_id == Lecture.subject_id)
+        .where(
+            StudentSubject.student_id == student.id,
+            StudentSubject.is_active.is_(True),
+            Lecture.lecture_date <= as_of,
+            Lecture.status != "SCHEDULED",
+        )
+        .order_by(Lecture.lecture_date)
+    ).unique().all()
     records = db.session.scalars(
         db.select(Attendance).where(Attendance.student_id == student.id, Attendance.attendance_date <= as_of).order_by(Attendance.attendance_date)
     ).all()

@@ -95,6 +95,13 @@ class Timetable(db.Model):
 
 class Lecture(db.Model):
     __tablename__ = "lectures"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "subject_id", "faculty_id", "lecture_date", "start_time", "end_time",
+            name="uq_lecture_schedule",
+        ),
+        db.CheckConstraint("start_time < end_time", name="ck_lecture_time_order"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)

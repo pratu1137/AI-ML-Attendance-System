@@ -78,6 +78,7 @@ def recognize_face():
         "reason": "MATCH" if result.recognized else "UNKNOWN_PERSON",
         "distance": result.distance,
         "threshold": current_app.config["FACE_RECOGNITION_THRESHOLD"],
+        "confidence": round(max(0.0, 1 - result.distance / current_app.config["FACE_RECOGNITION_THRESHOLD"]), 4) if result.distance is not None else 0.0,
     }
     if result.recognized and result.student:
         response["student"] = {
@@ -129,6 +130,7 @@ def mark_attendance_from_frame():
             window_before_minutes=current_app.config["ATTENDANCE_WINDOW_BEFORE_MINUTES"],
             window_after_minutes=current_app.config["ATTENDANCE_WINDOW_AFTER_MINUTES"],
             late_after_minutes=current_app.config["ATTENDANCE_LATE_AFTER_MINUTES"],
+            timetable_entry=timetable_entry if current_user.role == UserRole.FACULTY.value else None,
         )
     except (FaceEncodingError, ValueError) as error:
         return jsonify({"success": False, "error": str(error)}), 400
@@ -143,6 +145,7 @@ def mark_attendance_from_frame():
         "faces_detected": 1,
         "faces": [faces[0].as_dict()],
         "distance": recognition.distance,
+        "confidence": round(max(0.0, 1 - recognition.distance / current_app.config["FACE_RECOGNITION_THRESHOLD"]), 4) if recognition.distance is not None else 0.0,
     }
     if result.attendance:
         response["attendance"] = {

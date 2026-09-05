@@ -115,6 +115,18 @@ def deactivate_student(student_id: int):
     return redirect(url_for("academic.students"))
 
 
+@academic_bp.post("/students/<int:student_id>/activate")
+@role_required(UserRole.ADMIN.value)
+def activate_student(student_id: int):
+    student = db.get_or_404(Student, student_id)
+    student.is_active = True
+    if student.user:
+        student.user.is_active = True
+    db.session.commit()
+    flash("Student activated.", "success")
+    return redirect(url_for("academic.students"))
+
+
 @academic_bp.post("/students/<int:student_id>/edit")
 @role_required(UserRole.ADMIN.value)
 def edit_student(student_id: int):
@@ -221,6 +233,17 @@ def deactivate_faculty(faculty_id: int):
     return redirect(url_for("academic.faculty"))
 
 
+@academic_bp.post("/faculty/<int:faculty_id>/activate")
+@role_required(UserRole.ADMIN.value)
+def activate_faculty(faculty_id: int):
+    person = db.get_or_404(Faculty, faculty_id)
+    person.is_active = True
+    person.user.is_active = True
+    db.session.commit()
+    flash("Faculty activated.", "success")
+    return redirect(url_for("academic.faculty"))
+
+
 @academic_bp.post("/subjects")
 @role_required(UserRole.ADMIN.value)
 def create_subject():
@@ -233,6 +256,8 @@ def create_subject():
             subject_id=values["subject_id"], subject_code=values["subject_code"], subject_name=values["subject_name"],
             semester=int(values["semester"]), department=values["department"],
         )
+        if subject.semester <= 0:
+            raise ValueError
         db.session.add(subject)
         db.session.commit()
     except ValueError:
@@ -260,6 +285,8 @@ def edit_subject(subject_id: int):
         subject.subject_code = values["subject_code"]
         subject.subject_name = values["subject_name"]
         subject.semester = int(values["semester"])
+        if subject.semester <= 0:
+            raise ValueError
         subject.department = values["department"]
         db.session.commit()
     except ValueError:
@@ -268,6 +295,16 @@ def edit_subject(subject_id: int):
     except IntegrityError:
         db.session.rollback()
         flash("Subject ID and subject code must be unique.", "error")
+    return redirect(url_for("academic.subjects"))
+
+
+@academic_bp.post("/subjects/<int:subject_id>/toggle-active")
+@role_required(UserRole.ADMIN.value)
+def toggle_subject_active(subject_id: int):
+    subject = db.get_or_404(Subject, subject_id)
+    subject.is_active = not subject.is_active
+    db.session.commit()
+    flash(f"Subject {'activated' if subject.is_active else 'deactivated'}.", "success")
     return redirect(url_for("academic.subjects"))
 
 
@@ -294,6 +331,17 @@ def create_timetable_entry():
         )
         if entry.start_time >= entry.end_time:
             raise ValueError
+        overlap = db.session.scalar(
+            db.select(Timetable).where(
+                Timetable.is_active.is_(True),
+                Timetable.day_of_week == entry.day_of_week,
+                or_(Timetable.faculty_id == entry.faculty_id, Timetable.room == entry.room),
+                Timetable.start_time < entry.end_time,
+                Timetable.end_time > entry.start_time,
+            )
+        )
+        if overlap:
+            raise ValueError("The faculty or room is already scheduled during this time.")
         db.session.add(entry)
         db.session.commit()
     except (ValueError, IntegrityError):

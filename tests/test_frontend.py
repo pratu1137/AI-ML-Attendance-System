@@ -48,6 +48,8 @@ def test_live_attendance_uses_transparent_overlay_and_compact_status_panel(clien
     assert b".camera-stage video{transform:none}" in css.data
     assert b"background:transparent" in css.data
     assert b"Multiple faces detected" in javascript.data
+    assert b"completed = true" in javascript.data
+    assert b"AbortController" in javascript.data
 
 
 def test_enrollment_supports_uploaded_samples(client):

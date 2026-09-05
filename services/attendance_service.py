@@ -39,7 +39,17 @@ def _lecture_for_timetable(timetable_entry, current_datetime: datetime) -> Lectu
         status="ONGOING",
     )
     db.session.add(lecture)
-    db.session.flush()
+    try:
+        db.session.flush()
+    except IntegrityError:
+        db.session.rollback()
+        return db.session.scalar(db.select(Lecture).where(
+            Lecture.subject_id == timetable_entry.subject_id,
+            Lecture.faculty_id == timetable_entry.faculty_id,
+            Lecture.lecture_date == current_datetime.date(),
+            Lecture.start_time == timetable_entry.start_time,
+            Lecture.end_time == timetable_entry.end_time,
+        ))
     return lecture
 
 
@@ -50,11 +60,12 @@ def mark_attendance(
     window_before_minutes: int = 0,
     window_after_minutes: int = 0,
     late_after_minutes: int = 10,
+    timetable_entry=None,
 ) -> AttendanceResult:
     current_datetime = localize(current_datetime) if current_datetime else local_now()
     if not student.is_active:
         return AttendanceResult(False, "INACTIVE_STUDENT", "Student account is inactive.")
-    timetable_entry = get_attendance_timetable_entry(current_datetime, window_before_minutes, window_after_minutes)
+    timetable_entry = timetable_entry or get_attendance_timetable_entry(current_datetime, window_before_minutes, window_after_minutes)
     if not timetable_entry:
         return AttendanceResult(False, "NO_ACTIVE_LECTURE", "NO ACTIVE LECTURE")
     enrolled = db.session.scalar(db.select(StudentSubject).where(

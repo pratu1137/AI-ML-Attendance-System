@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import func
 
 from extensions import db
-from models import Attendance, AttendanceSettings, Lecture, Student, Subject
+from models import Attendance, AttendanceSettings, Lecture, Student, StudentSubject, Subject
 from services.timezone_service import local_now
 
 
@@ -46,12 +46,29 @@ def attendance_rows(student_id: int | None = None, faculty_id: int | None = None
 
 
 def student_summary(student: Student, conducted_lectures: list[Lecture] | None = None) -> dict:
-    lectures = conducted_lectures or db.session.scalars(
-        db.select(Lecture).where(Lecture.lecture_date <= local_now().date(), Lecture.status != "SCHEDULED")
-    ).all()
+    if conducted_lectures is None:
+        lectures = db.session.scalars(
+            db.select(Lecture)
+            .join(StudentSubject, StudentSubject.subject_id == Lecture.subject_id)
+            .where(
+                StudentSubject.student_id == student.id,
+                StudentSubject.is_active.is_(True),
+                Lecture.lecture_date <= local_now().date(),
+                Lecture.status != "SCHEDULED",
+            )
+        ).all()
+    else:
+        enrolled_subjects = set(db.session.scalars(db.select(StudentSubject.subject_id).where(
+            StudentSubject.student_id == student.id,
+            StudentSubject.is_active.is_(True),
+        )))
+        lectures = [lecture for lecture in conducted_lectures if lecture.subject_id in enrolled_subjects]
+    lecture_ids = {lecture.id for lecture in lectures}
     present = db.session.scalar(
         db.select(func.count(Attendance.id)).where(
-            Attendance.student_id == student.id, Attendance.status.in_(["PRESENT", "LATE"])
+            Attendance.student_id == student.id,
+            Attendance.lecture_id.in_(lecture_ids) if lecture_ids else False,
+            Attendance.status.in_(["PRESENT", "LATE"]),
         )
     ) or 0
     return {
@@ -91,27 +108,54 @@ def analytics_summary(student_id: int | None = None, faculty_id: int | None = No
         attendance_query = attendance_query.join(Attendance.lecture).where(Lecture.faculty_id == faculty_id)
     present = db.session.scalar(attendance_query) or 0
     active_students = db.session.scalar(db.select(func.count(Student.id)).where(Student.is_active.is_(True))) or 0
+    student = db.session.get(Student, student_id) if student_id else None
+    if student_id and student:
+        lectures = [lecture for lecture in lectures if db.session.scalar(db.select(StudentSubject.id).where(
+            StudentSubject.student_id == student.id,
+            StudentSubject.subject_id == lecture.subject_id,
+            StudentSubject.is_active.is_(True),
+        ))]
+        applicable_ids = {lecture.id for lecture in lectures}
+        present = sum(
+            1 for lecture in lectures for record in lecture.attendance_records
+            if record.student_id == student.id and record.status in {"PRESENT", "LATE"}
+        )
+        total = len(lectures)
+    else:
+        total = 0
+        for lecture in lectures:
+            total += db.session.scalar(db.select(func.count(StudentSubject.student_id)).where(
+                StudentSubject.subject_id == lecture.subject_id,
+                StudentSubject.is_active.is_(True),
+                StudentSubject.student_id.in_(db.select(Student.id).where(Student.is_active.is_(True))),
+            )) or 0
     daily = {}
     for lecture in lectures:
         key = lecture.lecture_date.isoformat()
         daily.setdefault(key, {"present": 0, "total": 0})
-        daily[key]["total"] += 1 if student_id else active_students
+        daily[key]["total"] += 1 if student_id else (db.session.scalar(db.select(func.count(StudentSubject.student_id)).where(
+            StudentSubject.subject_id == lecture.subject_id, StudentSubject.is_active.is_(True)
+        )) or 0)
         daily[key]["present"] += sum(1 for record in lecture.attendance_records if record.status in {"PRESENT", "LATE"} and (not student_id or record.student_id == student_id))
     subjects = {}
     for lecture in lectures:
         item = subjects.setdefault(lecture.subject.subject_code, {"subject": lecture.subject.subject_name, "present": 0, "total": 0})
-        item["total"] += 1 if student_id else active_students
+        item["total"] += 1 if student_id else (db.session.scalar(db.select(func.count(StudentSubject.student_id)).where(
+            StudentSubject.subject_id == lecture.subject_id, StudentSubject.is_active.is_(True)
+        )) or 0)
         item["present"] += sum(1 for record in lecture.attendance_records if record.status in {"PRESENT", "LATE"} and (not student_id or record.student_id == student_id))
     monthly = {}
     for lecture in lectures:
         key = lecture.lecture_date.strftime("%Y-%m")
         monthly.setdefault(key, {"present": 0, "total": 0})
-        monthly[key]["total"] += 1 if student_id else active_students
+        monthly[key]["total"] += 1 if student_id else (db.session.scalar(db.select(func.count(StudentSubject.student_id)).where(
+            StudentSubject.subject_id == lecture.subject_id, StudentSubject.is_active.is_(True)
+        )) or 0)
         monthly[key]["present"] += sum(1 for record in lecture.attendance_records if record.status in {"PRESENT", "LATE"} and (not student_id or record.student_id == student_id))
     return {
         "total_lectures": len(lectures),
         "present": present,
-        "overall_percentage": percentage(present, len(lectures) if student_id else active_students * len(lectures)),
+        "overall_percentage": percentage(present, total if student_id else sum(item["total"] for item in daily.values())),
         "daily": [{"date": key, **value, "percentage": percentage(value["present"], value["total"])} for key, value in daily.items()],
         "monthly": [{"month": key, **value, "percentage": percentage(value["present"], value["total"])} for key, value in monthly.items()],
         "subjects": [{"subject_code": key, **value, "percentage": percentage(value["present"], value["total"])} for key, value in subjects.items()],

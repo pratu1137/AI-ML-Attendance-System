@@ -8,7 +8,7 @@ def test_healthcheck_returns_ok(client):
     response = client.get("/healthz")
 
     assert response.status_code == 200
-    assert response.get_json() == {"status": "ok"}
+    assert response.get_json() == {"status": "ok", "database": "ok"}
 
 
 def test_production_config_requires_secret_and_database(monkeypatch):

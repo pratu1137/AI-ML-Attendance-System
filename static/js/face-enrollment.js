@@ -69,7 +69,11 @@
         }
     }
 
-    student.addEventListener("change", updateControls);
+    student.addEventListener("change", () => {
+        samples.length = 0;
+        fileInput.value = "";
+        updateControls();
+    });
     consent.addEventListener("change", updateControls);
     startButton.addEventListener("click", startCamera);
     captureButton.addEventListener("click", captureSample);

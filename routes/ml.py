@@ -28,8 +28,11 @@ def ml_risk_page():
         students = [current_user.student_profile] if current_user.student_profile else []
     else:
         students = db.session.scalars(db.select(Student).where(Student.is_active.is_(True)).order_by(Student.full_name)).all()
-    results = [_prediction(student) for student in students]
-    return render_template("ml/risk.html", results=results)
+    try:
+        results = [_prediction(student) for student in students]
+    except (FileNotFoundError, ValueError) as error:
+        return render_template("ml/risk.html", results=[], error=str(error)), 503
+    return render_template("ml/risk.html", results=results, error=None)
 
 
 @ml_bp.get("/api/ml-risk/<int:student_id>")
@@ -38,7 +41,12 @@ def ml_risk_api(student_id: int):
     student = db.get_or_404(Student, student_id)
     if current_user.role == UserRole.STUDENT.value and student.user_id != current_user.id:
         return jsonify({"success": False, "error": "Students may view only their own risk."}), 403
-    result = _prediction(student)
+    try:
+        result = _prediction(student)
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "Attendance risk model is not installed."}), 503
+    except ValueError:
+        return jsonify({"success": False, "error": "Attendance risk model is invalid."}), 503
     prediction = result["prediction"]
     return jsonify({
         "success": True,

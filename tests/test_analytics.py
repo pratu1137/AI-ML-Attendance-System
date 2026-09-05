@@ -1,7 +1,7 @@
 from datetime import date, datetime, time
 
 from extensions import db
-from models import Attendance, Faculty, Lecture, Student, Subject, User, UserRole
+from models import Attendance, Faculty, Lecture, Student, StudentSubject, Subject, User, UserRole
 from services.analytics_service import analytics_summary, detain_rows
 
 
@@ -16,6 +16,7 @@ def setup_admin_data(app):
         subject = Subject(subject_id="SUB-1", subject_code="CS101", subject_name="Algorithms", semester=2, department="CS")
         db.session.add_all([admin, faculty_user, faculty, student, subject])
         db.session.flush()
+        db.session.add(StudentSubject(student_id=student.id, subject_id=subject.id))
         lecture = Lecture(subject_id=subject.id, faculty_id=faculty.id, lecture_date=date.today(), start_time=time(9), end_time=time(10), status="COMPLETED")
         db.session.add(lecture)
         db.session.flush()
@@ -51,6 +52,20 @@ def test_analytics_page_contains_chart_data(app, client):
     assert b"daily-attendance-chart" in response.data
     assert b"analytics.js" in response.data
     assert b"CS101" in response.data
+
+
+def test_student_summary_only_counts_enrolled_subject_lectures(app):
+    setup_admin_data(app)
+    with app.app_context():
+        subject = Subject(subject_id="SUB-2", subject_code="CS102", subject_name="Databases", semester=2, department="CS")
+        db.session.add(subject)
+        db.session.flush()
+        faculty = db.session.scalar(db.select(Faculty))
+        db.session.add(Lecture(subject_id=subject.id, faculty_id=faculty.id, lecture_date=date.today(), start_time=time(11), end_time=time(12), status="COMPLETED"))
+        db.session.commit()
+        summary = analytics_summary(student_id=1)
+        assert summary["total_lectures"] == 1
+        assert summary["overall_percentage"] == 100.0
 
 
 def test_admin_can_update_thresholds_and_filter_detain_list(app, client):

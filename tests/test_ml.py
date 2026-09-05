@@ -20,12 +20,23 @@ def test_training_uses_labeled_demo_fallback_and_evaluates(tmp_path):
     assert (tmp_path / "risk.joblib").exists()
 
 
+def test_prediction_does_not_train_when_model_is_missing(app, tmp_path):
+    with app.app_context():
+        student = Student(student_id="STU-MISSING", roll_number="R-MISSING", full_name="Missing Model", branch="CS", year=2, division="A", email="missing@example.com")
+        db.session.add(student)
+        db.session.commit()
+        import pytest
+        with pytest.raises(FileNotFoundError):
+            predict_student_risk(student, tmp_path / "missing.joblib")
+
+
 def test_feature_engineering_and_prediction_are_persisted(app, tmp_path):
     with app.app_context():
         student = Student(student_id="STU-001", roll_number="R-001", full_name="Ada Student", branch="CS", year=2, division="A", email="ada@example.com")
         db.session.add(student)
         db.session.commit()
         features = features_for_student(student)
+        train_model(tmp_path / "risk.joblib")
         result = predict_student_risk(student, tmp_path / "risk.joblib")
         assert list(features) == FEATURE_NAMES
         assert result["data_source"] == "DEMO_SYNTHETIC"

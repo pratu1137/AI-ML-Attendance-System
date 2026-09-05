@@ -3,5 +3,6 @@
 {% block content %}
 <h1>ML attendance risk</h1>
 <p>Predictions are decision support only and do not make academic or detention decisions.</p>
+{% if error %}<p role="alert">Risk predictions are unavailable: {{ error }}</p>{% endif %}
 <table><thead><tr><th>Student</th><th>Risk</th><th>High-risk probability</th><th>Data source</th></tr></thead><tbody>{% for result in results %}<tr><td>{{ result.student.full_name }} ({{ result.student.student_id }})</td><td>{{ result.prediction.risk_class }}</td><td>{{ (result.prediction.high_risk_probability * 100)|round(2) }}%</td><td>{{ result.prediction.data_source }}</td></tr>{% else %}<tr><td colspan="4">No student profiles available.</td></tr>{% endfor %}</tbody></table>
 {% endblock %}

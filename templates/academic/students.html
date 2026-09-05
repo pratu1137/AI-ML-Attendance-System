@@ -16,7 +16,7 @@
     <button type="submit">Add student</button>
 </form>
 <table>
-    <thead><tr><th>Student ID</th><th>Name</th><th>Roll Number</th><th>Branch</th><th>Status</th></tr></thead>
-    <tbody>{% for student in students %}<tr><td>{{ student.student_id }}</td><td><a href="{{ url_for('academic.student_detail', student_id=student.id) }}">{{ student.full_name }}</a></td><td>{{ student.roll_number }}</td><td>{{ student.branch }}</td><td>{{ "Active" if student.is_active else "Inactive" }}</td><td>{% if student.is_active %}<form method="post" action="{{ url_for('academic.deactivate_student', student_id=student.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Deactivate</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="6">No students found.</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Student ID</th><th>Name</th><th>Roll Number</th><th>Branch</th><th>Face enrollment</th><th>Status</th></tr></thead>
+    <tbody>{% for student in students %}<tr><td>{{ student.student_id }}</td><td><a href="{{ url_for('academic.student_detail', student_id=student.id) }}">{{ student.full_name }}</a></td><td>{{ student.roll_number }}</td><td>{{ student.branch }}</td><td>{{ "Enrolled" if student.face_enrollment and student.face_enrollment.is_active else "Not enrolled" }}</td><td>{{ "Active" if student.is_active else "Inactive" }}</td><td>{% if student.is_active %}<form method="post" action="{{ url_for('academic.deactivate_student', student_id=student.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Deactivate</button></form>{% else %}<form method="post" action="{{ url_for('academic.activate_student', student_id=student.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Activate</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="7">No students found.</td></tr>{% endfor %}</tbody>
 </table>
 {% endblock %}

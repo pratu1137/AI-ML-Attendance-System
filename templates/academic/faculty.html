@@ -32,6 +32,11 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit">Deactivate</button>
             </form>
+            {% else %}
+            <form method="post" action="{{ url_for('academic.activate_faculty', faculty_id=person.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Activate</button>
+            </form>
             {% endif %}
         </td>
     </tr>

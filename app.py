@@ -2,10 +2,11 @@ import os
 from pathlib import Path
 
 import click
-from flask import Flask, jsonify, redirect, render_template, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_login import current_user, login_required
+from flask_migrate import upgrade as migrate_upgrade
 
 from config import Config, ProductionConfig
 from extensions import csrf, db, login_manager, migrate
@@ -51,6 +52,34 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     def handle_oversized_upload(_error):
         return jsonify({"success": False, "error": "The camera frame is too large."}), 413
 
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(self), microphone=()")
+        if request.is_secure:
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
+
+    def friendly_error(message: str, status: int):
+        if request.path.startswith("/api/"):
+            return jsonify({"success": False, "error": message}), status
+        return render_template("error.html", message=message, status=status), status
+
+    @app.errorhandler(403)
+    def forbidden(_error):
+        return friendly_error("You are not authorized to perform this action.", 403)
+
+    @app.errorhandler(404)
+    def not_found(_error):
+        return friendly_error("The requested page was not found.", 404)
+
+    @app.errorhandler(500)
+    def internal_error(_error):
+        db.session.rollback()
+        return friendly_error("Something went wrong. Please try again.", 500)
+
     @login_manager.user_loader
     def load_user(user_id: str) -> User | None:
         return db.session.get(User, int(user_id))
@@ -63,7 +92,11 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
     @app.get("/healthz")
     def healthcheck():
-        return jsonify({"status": "ok"})
+        try:
+            db.session.execute(db.text("SELECT 1"))
+        except Exception:
+            return jsonify({"status": "unhealthy"}), 503
+        return jsonify({"status": "ok", "database": "ok"})
 
     @app.get("/dashboard")
     @login_required
@@ -88,10 +121,10 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
     @app.cli.command("upgrade-db")
     def upgrade_db_command() -> None:
-        """Create missing tables without dropping existing application data."""
+        """Apply committed migrations without dropping application data."""
         with app.app_context():
-            db.create_all()
-        click.echo("Database schema upgraded with missing tables preserved.")
+            migrate_upgrade()
+        click.echo("Database migrations applied.")
 
     @app.cli.command("seed-admin")
     @click.option("--email", default=None, help="Admin email address.")

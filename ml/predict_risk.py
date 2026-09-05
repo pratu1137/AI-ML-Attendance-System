@@ -4,14 +4,22 @@ import joblib
 import numpy as np
 
 from ml.feature_engineering import FEATURE_NAMES, features_for_student
-from ml.train_model import train_model
+from ml.train_model import MODEL_VERSION
 
 
 def load_artifact(path: str | Path):
     path = Path(path)
     if not path.exists():
-        return train_model(path)
-    return joblib.load(path)
+        raise FileNotFoundError("No approved attendance risk model is installed.")
+    try:
+        artifact = joblib.load(path)
+    except (OSError, ValueError, EOFError) as error:
+        raise ValueError("The installed attendance risk model is invalid.") from error
+    if not isinstance(artifact, dict) or artifact.get("model_version") != MODEL_VERSION:
+        raise ValueError("The installed attendance risk model is incompatible.")
+    if artifact.get("feature_names") != FEATURE_NAMES or "model" not in artifact:
+        raise ValueError("The installed attendance risk model has invalid metadata.")
+    return artifact
 
 
 def predict_student_risk(student, model_path: str | Path) -> dict:

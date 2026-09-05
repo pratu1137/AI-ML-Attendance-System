@@ -119,3 +119,20 @@ def test_current_lecture_api_returns_no_active_lecture_for_empty_schedule(app, c
 
     assert response.status_code == 200
     assert response.get_json() == {"active": False, "message": "NO ACTIVE LECTURE"}
+
+
+def test_timetable_rejects_overlapping_faculty_schedule(app, client):
+    login_admin(app, client)
+    entry_id = create_timetable_data(app)
+    with app.app_context():
+        entry = db.session.get(Timetable, entry_id)
+        subject_id = entry.subject_id
+        faculty_id = entry.faculty_id
+    response = client.post("/timetable", data={
+        "day_of_week": "0", "subject_id": str(subject_id), "faculty_id": str(faculty_id),
+        "room": "A-102", "start_time": "10:30", "end_time": "11:30",
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert b"Timetable values are invalid" in response.data
+    with app.app_context():
+        assert db.session.scalar(db.select(db.func.count(Timetable.id))) == 1
