@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
 
 from extensions import db
-from models import Timetable
+from models import Faculty, Subject, Timetable
 from services.timezone_service import localize, local_now
 
 
@@ -13,9 +13,11 @@ def get_current_timetable_entry(current_datetime: datetime | None = None) -> Tim
     current_time = current_datetime.time().replace(tzinfo=None)
     return db.session.scalar(
         db.select(Timetable)
+        .join(Timetable.faculty)
+        .join(Timetable.subject)
         .where(
             and_(
-                Timetable.is_active.is_(True),
+                Timetable.is_active.is_(True), Faculty.is_active.is_(True), Subject.is_active.is_(True),
                 Timetable.day_of_week == current_datetime.weekday(),
                 Timetable.start_time <= current_time,
                 Timetable.end_time > current_time,
@@ -33,8 +35,10 @@ def get_attendance_timetable_entry(
     """Return a timetable entry whose configurable attendance window is open."""
     current_datetime = localize(current_datetime)
     entries = db.session.scalars(
-        db.select(Timetable)
-        .where(Timetable.is_active.is_(True), Timetable.day_of_week == current_datetime.weekday())
+        db.select(Timetable).join(Timetable.faculty).join(Timetable.subject).where(
+            Timetable.is_active.is_(True), Faculty.is_active.is_(True), Subject.is_active.is_(True),
+            Timetable.day_of_week == current_datetime.weekday()
+        )
         .order_by(Timetable.start_time)
     ).all()
     for entry in entries:

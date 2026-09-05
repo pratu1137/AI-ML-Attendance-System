@@ -51,6 +51,37 @@ def test_admin_can_create_and_search_student(app, client):
     assert b"Ada Student" in response.data
 
 
+def test_student_identifiers_are_unique_ignoring_case_and_whitespace(app, client):
+    login_admin(app, client)
+    data = {
+        "student_id": "STU-001", "roll_number": "R-01", "full_name": "Ada Student",
+        "branch": "Computer Science", "year": "2", "division": "A", "email": "ada@example.com",
+    }
+    assert client.post("/students", data=data).status_code == 302
+    duplicate = client.post("/students", data={**data, "student_id": " stu-001 ", "roll_number": "R-02", "email": "other@example.com"}, follow_redirects=True)
+    assert b"must be unique" in duplicate.data
+    with app.app_context():
+        assert db.session.scalar(db.select(db.func.count(Student.id))) == 1
+
+
+def test_admin_can_create_and_deactivate_faculty(app, client):
+    login_admin(app, client)
+    response = client.post("/faculty", data={
+        "email": "faculty@example.com", "password": "faculty-password",
+        "full_name": "Dr. Ada", "department": "Computer Science",
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        faculty = db.session.scalar(db.select(Faculty))
+        faculty_id = faculty.id
+        user_id = faculty.user_id
+    response = client.post(f"/faculty/{faculty_id}/deactivate", follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert db.session.get(Faculty, faculty_id).is_active is False
+        assert db.session.get(User, user_id).is_active is False
+
+
 def test_non_admin_cannot_manage_students(app, client):
     with app.app_context():
         user = User(email="faculty@example.com", role=UserRole.FACULTY.value)

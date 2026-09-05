@@ -151,7 +151,21 @@ def mark_attendance_from_frame():
             "check_in_time": result.attendance.check_in_time.isoformat(),
             "lecture_id": result.attendance.lecture_id,
         }
-    return jsonify(response), 200 if result.success or result.code == "ALREADY_RECORDED" else 409 if result.code == "ALREADY_RECORDED" else 400
+        response["lecture"] = {
+            "subject": result.attendance.lecture.subject.subject_name,
+            "subject_code": result.attendance.lecture.subject.subject_code,
+            "faculty": result.attendance.lecture.faculty.full_name,
+        }
+    if recognition.student:
+        response["student"] = {
+            "student_id": recognition.student.student_id,
+            "roll_number": recognition.student.roll_number,
+            "full_name": recognition.student.full_name,
+            "branch": recognition.student.branch,
+            "year": recognition.student.year,
+            "division": recognition.student.division,
+        }
+    return jsonify(response), 200 if result.success else 409 if result.code == "ALREADY_RECORDED" else 400
 
 
 @face_bp.get("/face-enrollment")

@@ -24,6 +24,7 @@
             <a href="{{ url_for('dashboard') }}">⌂ <span>Dashboard</span></a>
             {% if current_user.role == 'ADMIN' %}
             <a href="{{ url_for('academic.students') }}">◉ <span>Students</span></a>
+            <a href="{{ url_for('academic.faculty') }}">◉ <span>Faculty</span></a>
             <a href="{{ url_for('academic.subjects') }}">▣ <span>Subjects</span></a>
             <a href="{{ url_for('academic.timetable') }}">◷ <span>Timetable</span></a>
             <a href="{{ url_for('face.enrollment_page') }}">◌ <span>Face enrollment</span></a>

@@ -33,7 +33,10 @@ class FaceEncoder:
         resized = cv2.resize(crop, (128, 128), interpolation=cv2.INTER_AREA).astype(np.float32)
         normalized = (resized - float(resized.mean())) / max(float(resized.std()), 1.0)
         vector = normalized.reshape(-1)
-        vector /= max(float(np.linalg.norm(vector)), 1.0)
+        norm = float(np.linalg.norm(vector))
+        if norm == 0 or not np.isfinite(norm):
+            raise FaceEncodingError("Face samples produced an invalid representation.")
+        vector /= norm
         return FaceEncoding(vector=vector.astype(np.float32))
 
     def aggregate(self, encodings: list[FaceEncoding]) -> FaceEncoding:

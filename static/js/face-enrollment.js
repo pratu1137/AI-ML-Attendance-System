@@ -7,15 +7,18 @@
     const startButton = document.getElementById("start-enrollment");
     const captureButton = document.getElementById("capture-sample");
     const submitButton = document.getElementById("submit-enrollment");
+    const fileInput = document.getElementById("face-files");
     const csrfToken = document.getElementById("csrf-token").value;
     const canvas = document.createElement("canvas");
     const samples = [];
     let stream = null;
 
     function updateControls() {
-        captureButton.disabled = !stream || !student.value || !consent.checked || samples.length >= 3;
-        submitButton.disabled = samples.length < 3 || !student.value || !consent.checked;
-        sampleCount.textContent = `Samples: ${samples.length} / 3`;
+        const uploadedCount = Math.min(fileInput.files.length, 3 - samples.length);
+        const totalSamples = samples.length + uploadedCount;
+        captureButton.disabled = !stream || !student.value || !consent.checked || totalSamples >= 3;
+        submitButton.disabled = totalSamples < 3 || !student.value || !consent.checked;
+        sampleCount.textContent = `Samples: ${totalSamples} / 3`;
     }
 
     async function startCamera() {
@@ -52,6 +55,7 @@
         formData.append("student_id", student.value);
         formData.append("consent", "true");
         samples.forEach((sample, index) => formData.append("samples", sample, `enrollment-${index + 1}.jpg`));
+        Array.from(fileInput.files).slice(0, 3 - samples.length).forEach((sample) => formData.append("samples", sample, sample.name));
         try {
             const response = await fetch("/api/face/enroll", { method: "POST", headers: { "X-CSRFToken": csrfToken }, body: formData });
             const payload = await response.json();
@@ -70,5 +74,6 @@
     startButton.addEventListener("click", startCamera);
     captureButton.addEventListener("click", captureSample);
     submitButton.addEventListener("click", submitEnrollment);
+    fileInput.addEventListener("change", updateControls);
     window.addEventListener("beforeunload", () => stream?.getTracks().forEach((track) => track.stop()));
 })();

@@ -26,11 +26,13 @@
     function drawFaces(faces) {
         overlay.width = video.videoWidth;
         overlay.height = video.videoHeight;
+        const scaleX = overlay.width / captureCanvas.width;
+        const scaleY = overlay.height / captureCanvas.height;
         const context = overlay.getContext("2d");
         context.clearRect(0, 0, overlay.width, overlay.height);
         context.strokeStyle = "#20c997";
         context.lineWidth = Math.max(2, overlay.width / 320);
-        faces.forEach((face) => context.strokeRect(face.x, face.y, face.width, face.height));
+        faces.forEach((face) => context.strokeRect(face.x * scaleX, face.y * scaleY, face.width * scaleX, face.height * scaleY));
     }
 
     async function processFrame() {
@@ -53,13 +55,13 @@
             drawFaces(payload.faces);
             facesDetected.textContent = String(payload.faces_detected || 0);
             if (payload.recorded) {
-                result.textContent = `${payload.message} (${payload.attendance.status})`;
+                result.textContent = `${payload.student.full_name} (${payload.student.roll_number}) - ${payload.message} (${payload.attendance.status})`;
             } else if (payload.reason === "NO_FACE") {
                 result.textContent = "Searching for face...";
             } else if (payload.reason === "MULTIPLE_FACES") {
                 result.textContent = "Multiple faces detected - please keep only one person in frame.";
             } else if (payload.reason === "ALREADY_RECORDED") {
-                result.textContent = payload.message;
+                result.textContent = payload.student ? `${payload.student.full_name} (${payload.student.roll_number}) - ${payload.message}` : payload.message;
             } else if (payload.reason === "NO_ACTIVE_LECTURE") {
                 result.textContent = "NO ACTIVE LECTURE";
             } else {

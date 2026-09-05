@@ -45,5 +45,25 @@ def test_live_attendance_uses_transparent_overlay_and_compact_status_panel(clien
     assert b"camera-status-panel" in response.data
     assert b"faces-detected" in response.data
     assert b".camera-stage canvas" in css.data
+    assert b".camera-stage video{transform:none}" in css.data
     assert b"background:transparent" in css.data
     assert b"Multiple faces detected" in javascript.data
+
+
+def test_enrollment_supports_uploaded_samples(client):
+    with client.application.app_context():
+        user = User(email="frontend-admin@example.com", role=UserRole.ADMIN.value)
+        user.set_password("frontend-password")
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    response = client.get("/face-enrollment")
+    script = client.get("/static/js/face-enrollment.js")
+
+    assert response.status_code == 200
+    assert b'type="file"' in response.data
+    assert b"fileInput.files" in script.data

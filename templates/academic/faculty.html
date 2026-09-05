@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Faculty | Attendance System{% endblock %}
+{% block content %}
+<h1>Faculty</h1>
+<p class="muted">Manage faculty accounts used by timetable lectures and attendance authorization.</p>
+<form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Email<input name="email" type="email" required></label>
+    <label>Temporary password<input name="password" type="password" minlength="8" required></label>
+    <label>Full name<input name="full_name" required></label>
+    <label>Department<input name="department" required></label>
+    <button type="submit">Add faculty</button>
+</form>
+<table>
+    <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for person in faculty %}
+    <tr>
+        <td>{{ person.full_name }}</td><td>{{ person.user.email }}</td><td>{{ person.department }}</td>
+        <td>{{ "Active" if person.is_active else "Inactive" }}</td>
+        <td>
+            {% if person.is_active %}
+            <form method="post" action="{{ url_for('academic.edit_faculty', faculty_id=person.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input name="email" type="email" value="{{ person.user.email }}" required>
+                <input name="full_name" value="{{ person.full_name }}" required>
+                <input name="department" value="{{ person.department }}" required>
+                <input name="password" type="password" minlength="8" placeholder="New password (optional)">
+                <button type="submit">Save</button>
+            </form>
+            <form method="post" action="{{ url_for('academic.deactivate_faculty', faculty_id=person.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Deactivate</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}<tr><td colspan="5">No faculty found.</td></tr>{% endfor %}
+    </tbody>
+</table>
+{% endblock %}
